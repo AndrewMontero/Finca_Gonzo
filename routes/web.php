@@ -1,18 +1,21 @@
 <?php
 
+use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\EntregaController;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\FacturaController;
+use App\Http\Controllers\DashboardController;
 
 Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+// Dashboard principal con middleware
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
 // 🔐 Rutas protegidas (requieren login)
 Route::middleware('auth')->group(function () {
@@ -20,6 +23,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Generar facturas PDF (disponible solo si está logueado)
+    Route::get('/facturas/{entrega}/pdf', [FacturaController::class, 'generarFactura'])
+        ->name('facturas.pdf');
 });
 
 // ✅ Solo ADMIN puede gestionar usuarios y productos

@@ -30,4 +30,11 @@ class Entrega extends Model
     {
         return $this->hasOne(Factura::class);
     }
+
+    public function productos()
+    {
+        return $this->belongsToMany(Producto::class, 'detalle_entrega')
+                    ->withPivot('cantidad')
+                    ->withTimestamps();
+    }
 }

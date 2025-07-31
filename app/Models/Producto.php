@@ -17,4 +17,11 @@ class Producto extends Model
         'stock_maximo',
         'stock_actual',
     ];
+
+    public function entregas()
+    {
+        return $this->belongsToMany(Entrega::class, 'detalle_entrega')
+                    ->withPivot('cantidad')
+                    ->withTimestamps();
+    }
 }
