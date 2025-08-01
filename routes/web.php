@@ -24,7 +24,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Generar facturas PDF (disponible solo si está logueado)
+    // Generar facturas PDF
     Route::get('/facturas/{entrega}/pdf', [FacturaController::class, 'generarFactura'])
         ->name('facturas.pdf');
 });
