@@ -40,4 +40,9 @@ Route::middleware(['auth', 'role:repartidor'])->group(function () {
     Route::get('entregas', [EntregaController::class, 'index'])->name('entregas.index');
 });
 
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::resource('auditorias', AuditoriaController::class)->only(['index', 'destroy']);
+});
+
+
 require __DIR__.'/auth.php';
