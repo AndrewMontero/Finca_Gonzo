@@ -1,26 +1,86 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    {{-- Bootstrap 5 (CDN) --}}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@yield('title', 'Finca Gonzo')</title>
-    @vite('resources/css/app.css')
+    @vite(['resources/css/app.css'])
 </head>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 <body class="bg-gray-100 min-h-screen flex flex-col">
 
     <!-- Navbar -->
-    <nav class="bg-green-600 p-4 text-white flex justify-between items-center">
-        <h1 class="text-xl font-bold">Finca Gonzo</h1>
-        <div>
-            <a href="{{ route('clientes.index') }}" class="px-3">Clientes</a>
-            <a href="{{ route('productos.index') }}" class="px-3">Productos</a>
-            <a href="{{ route('entregas.index') }}" class="px-3">Entregas</a>
-            <a href="{{ route('facturas.index') }}" class="px-3">Facturas</a>
+    <nav class="bg-green-600 text-white">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex h-16 items-center justify-between">
+
+                <!-- Brand -> Dashboard -->
+                <a href="{{ route('dashboard') }}" class="font-bold text-lg hover:opacity-90">
+                    Finca Gonzo
+                </a>
+
+                <!-- Desktop menu -->
+                <div class="hidden md:flex items-center gap-6">
+                    <a href="{{ route('clientes.index') }}"
+                        class="px-2 py-1 rounded hover:bg-green-700 {{ request()->routeIs('clientes.*') ? 'bg-green-700' : '' }}">
+                        Clientes
+                    </a>
+                    <a href="{{ route('productos.index') }}"
+                        class="px-2 py-1 rounded hover:bg-green-700 {{ request()->routeIs('productos.*') ? 'bg-green-700' : '' }}">
+                        Productos
+                    </a>
+                    <a href="{{ route('entregas.index') }}"
+                        class="px-2 py-1 rounded hover:bg-green-700 {{ request()->routeIs('entregas.*') ? 'bg-green-700' : '' }}">
+                        Entregas
+                    </a>
+                    <a href="{{ route('facturas.index') }}"
+                        class="px-2 py-1 rounded hover:bg-green-700 {{ request()->routeIs('facturas.*') ? 'bg-green-700' : '' }}">
+                        Facturas
+                    </a>
+                </div>
+
+                <!-- Mobile button -->
+                <button id="navToggle" class="md:hidden inline-flex items-center p-2 rounded hover:bg-green-700 focus:outline-none">
+                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile menu -->
+        <div id="mobileMenu" class="md:hidden hidden border-t border-green-500">
+            <div class="px-4 py-3 space-y-2">
+                <a href="{{ route('clientes.index') }}"
+                    class="block px-3 py-2 rounded hover:bg-green-700 {{ request()->routeIs('clientes.*') ? 'bg-green-700' : '' }}">
+                    Clientes
+                </a>
+                <a href="{{ route('productos.index') }}"
+                    class="block px-3 py-2 rounded hover:bg-green-700 {{ request()->routeIs('productos.*') ? 'bg-green-700' : '' }}">
+                    Productos
+                </a>
+                <a href="{{ route('entregas.index') }}"
+                    class="block px-3 py-2 rounded hover:bg-green-700 {{ request()->routeIs('entregas.*') ? 'bg-green-700' : '' }}">
+                    Entregas
+                </a>
+                <a href="{{ route('facturas.index') }}"
+                    class="block px-3 py-2 rounded hover:bg-green-700 {{ request()->routeIs('facturas.*') ? 'bg-green-700' : '' }}">
+                    Facturas
+                </a>
+            </div>
         </div>
     </nav>
 
     <!-- Contenido -->
-    <main class="flex-grow container mx-auto p-6">
+    <main class="flex-grow max-w-7xl mx-auto w-full p-6">
         @yield('content')
     </main>
 
@@ -28,5 +88,14 @@
     <footer class="bg-green-700 text-white p-4 text-center">
         &copy; {{ date('Y') }} Finca Gonzo - Todos los derechos reservados
     </footer>
+
+    <!-- Tiny JS para el menú móvil -->
+    <script>
+        document.getElementById('navToggle')?.addEventListener('click', () => {
+            const m = document.getElementById('mobileMenu');
+            m.classList.toggle('hidden');
+        });
+    </script>
 </body>
+
 </html>
