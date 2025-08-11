@@ -21,10 +21,21 @@
         <div class="max-w-7xl mx-auto px-4">
             <div class="flex h-16 items-center justify-between">
 
-                <!-- Brand -> Dashboard -->
-                <a href="{{ route('dashboard') }}" class="font-bold text-lg hover:opacity-90">
-                    Finca Gonzo
-                </a>
+                <!-- Flechas + Brand -->
+                <div class="flex items-center gap-3">
+                    <!-- Flecha atrás -->
+                    <button onclick="history.back()" class="text-white hover:opacity-80">
+                        <i class="bi bi-arrow-left-circle-fill fs-4"></i>
+                    </button>
+                    <!-- Flecha adelante -->
+                    <button onclick="history.forward()" class="text-white hover:opacity-80">
+                        <i class="bi bi-arrow-right-circle-fill fs-4"></i>
+                    </button>
+                    <!-- Brand -> Dashboard -->
+                    <a href="{{ route('dashboard') }}" class="font-bold text-lg hover:opacity-90">
+                        Finca Gonzo
+                    </a>
+                </div>
 
                 <!-- Desktop menu -->
                 <div class="hidden md:flex items-center gap-6">
