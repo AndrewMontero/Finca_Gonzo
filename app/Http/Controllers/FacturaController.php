@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Factura;
+use App\Models\Entrega;
 use Illuminate\Http\Request;
 
 class FacturaController extends Controller
@@ -12,11 +13,7 @@ class FacturaController extends Controller
      */
     public function index()
     {
-        $facturas = Factura::orderByDesc('created_at')->paginate(10);
-
-        // Si tienes modelo Cliente y relación, aquí podrías eager load:
-        // $facturas = Factura::with('cliente')->orderByDesc('created_at')->paginate(10);
-
+        $facturas = Factura::with('entrega')->orderByDesc('created_at')->paginate(10);
         return view('facturas.index', compact('facturas'));
     }
 
@@ -40,26 +37,44 @@ class FacturaController extends Controller
         $data = $request->validate([
             'cliente_id' => ['nullable', 'integer'],
             'total'      => ['required', 'numeric', 'min:0'],
+            'subtotal'   => ['required', 'numeric', 'min:0'],
             'notas'      => ['nullable', 'string', 'max:500'],
-            // Si luego guardamos renglones, aquí validamos items[]...
         ], [
             'total.required' => 'El total es obligatorio.',
             'total.numeric'  => 'El total debe ser numérico.',
             'total.min'      => 'El total no puede ser negativo.',
+            'subtotal.required' => 'El subtotal es obligatorio.',
+            'subtotal.numeric'  => 'El subtotal debe ser numérico.',
+            'subtotal.min'      => 'El subtotal no puede ser negativo.',
         ]);
 
-        $factura = Factura::create([
-            'cliente_id' => $data['cliente_id'] ?? null,
-            'total'      => $data['total'],
-            // 'detalle'  => json_encode($request->input('items', [])), // si tienes columna
-            'created_at' => now(),
-        ]);
+        try {
+            // 1. PRIMERO: Crear la entrega (obligatoria para la factura)
+            $entrega = Entrega::create([
+                'cliente_id' => $data['cliente_id'] ?? null,
+                'repartidor_id' => null, // Puedes asignar un repartidor por defecto si quieres
+                'fecha_hora' => now(),
+                'estado' => 'pendiente', // o el estado que manejes
+            ]);
 
-        // TODO: si en el futuro agregamos "detalle de factura", aquí se guardan los ítems.
+            // 2. SEGUNDO: Crear la factura asociada a la entrega
+            $factura = Factura::create([
+                'entrega_id' => $entrega->id, // ✅ ESTO es lo que faltaba
+                'subtotal'   => $data['subtotal'],
+                'total'      => $data['total'],
+            ]);
 
-        return redirect()
-            ->route('facturas.index')
-            ->with('success', 'Factura creada correctamente (ID: '.$factura->id.').');
+            // ✅ REDIRIGIR a la lista de facturas con mensaje de éxito
+            return redirect()
+                ->route('facturas.index')
+                ->with('success', 'Factura creada correctamente (ID: '.$factura->id.').');
+
+        } catch (\Exception $e) {
+            // Si algo falla, regresar con error
+            return back()
+                ->withInput()
+                ->with('error', 'Error al crear la factura: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -67,6 +82,7 @@ class FacturaController extends Controller
      */
     public function show(Factura $factura)
     {
+        $factura->load('entrega.cliente'); // Cargar relaciones
         return view('facturas.show', compact('factura'));
     }
 }

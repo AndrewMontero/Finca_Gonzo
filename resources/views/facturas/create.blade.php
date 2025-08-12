@@ -8,6 +8,24 @@
         <a href="{{ route('facturas.index') }}" class="btn btn-outline-secondary">Volver</a>
     </div>
 
+    {{-- Mostrar errores si existen --}}
+    @if($errors->any())
+        <div class="alert alert-danger">
+            <ul class="mb-0">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    {{-- Mostrar mensaje de error --}}
+    @if(session('error'))
+        <div class="alert alert-danger">
+            {{ session('error') }}
+        </div>
+    @endif
+
     <form method="POST" action="{{ route('facturas.store') }}" id="facturaForm" class="card shadow-sm border-0">
         @csrf
         <div class="card-body">
@@ -19,7 +37,7 @@
                     <select name="cliente_id" class="form-select">
                         <option value="">— Seleccionar —</option>
                         @foreach($clientes as $c)
-                        <option value="{{ $c->id }}">{{ $c->nombre }}</option>
+                        <option value="{{ $c->id }}" {{ old('cliente_id') == $c->id ? 'selected' : '' }}>{{ $c->nombre }}</option>
                         @endforeach
                     </select>
                     @else
@@ -81,7 +99,7 @@
             {{-- Notas --}}
             <div class="mt-3">
                 <label class="form-label">Notas (opcional)</label>
-                <textarea name="notas" rows="3" class="form-control" placeholder="Observaciones..."></textarea>
+                <textarea name="notas" rows="3" class="form-control" placeholder="Observaciones...">{{ old('notas') }}</textarea>
             </div>
 
             <hr class="my-4">
@@ -89,9 +107,14 @@
             {{-- Total --}}
             <div class="d-flex justify-content-end">
                 <div class="text-end">
+                    <div class="text-muted">Subtotal</div>
+                    <div class="h5 fw-semibold" id="subtotalTexto">₡0.00</div>
+
                     <div class="text-muted">Total</div>
                     <div class="display-6 fw-semibold" id="totalTexto">₡0.00</div>
-                    {{-- input hidden que se envía al backend --}}
+
+                    {{-- inputs hidden que se envían al backend --}}
+                    <input type="hidden" name="subtotal" id="subtotalInput" value="0">
                     <input type="hidden" name="total" id="totalInput" value="0">
                 </div>
             </div>
@@ -110,6 +133,8 @@
 <script>
     (function() {
         const tabla = document.getElementById('tablaItems').querySelector('tbody');
+        const subtotalTexto = document.getElementById('subtotalTexto');
+        const subtotalInput = document.getElementById('subtotalInput');
         const totalTexto = document.getElementById('totalTexto');
         const totalInput = document.getElementById('totalInput');
         const btnAgregar = document.getElementById('agregarFila');
@@ -130,12 +155,20 @@
         }
 
         function recalcularTotal() {
-            let total = 0;
+            let subtotalGeneral = 0;
             tabla.querySelectorAll('tr').forEach(tr => {
-                total += recalcularFila(tr);
+                subtotalGeneral += recalcularFila(tr);
             });
-            totalTexto.textContent = formatoCRC(total);
-            totalInput.value = total.toFixed(2);
+
+            // Por ahora subtotal = total (sin impuestos)
+            // Puedes agregar cálculo de impuestos aquí si necesitas
+            const totalGeneral = subtotalGeneral; // + impuestos si aplica
+
+            subtotalTexto.textContent = formatoCRC(subtotalGeneral);
+            subtotalInput.value = subtotalGeneral.toFixed(2);
+
+            totalTexto.textContent = formatoCRC(totalGeneral);
+            totalInput.value = totalGeneral.toFixed(2);
         }
 
         function bindRowEvents(tr) {
@@ -197,6 +230,16 @@
             tabla.appendChild(tr);
             bindRowEvents(tr);
             recalcularTotal();
+        });
+
+        // Validación antes de enviar el formulario
+        document.getElementById('facturaForm').addEventListener('submit', function(e) {
+            const total = parseFloat(totalInput.value || 0);
+            if (total <= 0) {
+                e.preventDefault();
+                alert('El total debe ser mayor a cero.');
+                return false;
+            }
         });
 
         // enlazar eventos a la fila inicial
