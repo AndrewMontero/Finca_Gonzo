@@ -45,18 +45,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Recursos principales
+    // Clientes
     Route::resource('clientes', ClienteController::class);
-    Route::resource('productos', ProductoController::class);
+
+    // Entregas y Detalle de entregas
     Route::resource('entregas', EntregaController::class);
     Route::resource('detalle-entregas', DetalleEntregaController::class);
 
-    // Facturas (mínimo necesario ahora)
+    // Facturas
     Route::resource('facturas', FacturaController::class)->only(['index', 'create', 'store', 'show']);
+    Route::get('/facturas/{entrega}/pdf', [FacturaController::class, 'generarFactura'])->name('facturas.pdf');
 
-    // Generar PDF de factura (si tu controlador lo implementa)
-    Route::get('/facturas/{entrega}/pdf', [FacturaController::class, 'generarFactura'])
-        ->name('facturas.pdf');
+    // Rutas para productos
+    Route::resource('productos', ProductoController::class);
+    Route::get('productos-stock-bajo', [ProductoController::class, 'stockBajo'])->name('productos.stock-bajo');
+    Route::post('productos/{id}/actualizar-stock', [ProductoController::class, 'actualizarStock'])->name('productos.actualizar-stock');
+    Route::get('api/productos', [ProductoController::class, 'api'])->name('productos.api');
 });
 
 /*
