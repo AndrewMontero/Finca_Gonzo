@@ -59,8 +59,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Rutas para productos
     Route::resource('productos', ProductoController::class);
     Route::get('productos-stock-bajo', [ProductoController::class, 'stockBajo'])->name('productos.stock-bajo');
-    Route::post('productos/{id}/actualizar-stock', [ProductoController::class, 'actualizarStock'])->name('productos.actualizar-stock');
     Route::get('api/productos', [ProductoController::class, 'api'])->name('productos.api');
+
+    // Actualizar stock (versión normal y Ajax)
+    Route::post('productos/{id}/actualizar-stock', [ProductoController::class, 'actualizarStock'])->name('productos.actualizar-stock');
+    Route::post('productos/{id}/actualizar-stock-ajax', [ProductoController::class, 'actualizarStockAjax'])->name('productos.actualizar-stock.ajax');
+
+    // NUEVAS RUTAS para los botones mejorados
+    Route::post('/productos/{id}/update-stock', [ProductoController::class, 'updateStock'])->name('productos.update-stock');
+    Route::post('/productos/{id}/duplicate', [ProductoController::class, 'duplicate'])->name('productos.duplicate');
 });
 
 /*
@@ -72,16 +79,5 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::resource('usuarios', UserController::class);
     Route::resource('auditorias', AuditoriaController::class)->only(['index', 'destroy']);
 });
-
-/*
-|--------------------------------------------------------------------------
-| (Opcional) Rutas para REPARTIDOR
-| Nota: ya tienes resource('entregas') en las rutas autenticadas;
-| si necesitas vistas específicas del rol repartidor, usa prefijo.
-|--------------------------------------------------------------------------
-*/
-// Route::middleware(['auth', 'role:repartidor'])->prefix('repartidor')->group(function () {
-//     Route::get('/entregas', [EntregaController::class, 'index'])->name('repartidor.entregas.index');
-// });
 
 require __DIR__ . '/auth.php';

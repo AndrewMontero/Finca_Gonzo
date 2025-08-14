@@ -17,6 +17,21 @@
                 </a>
             </div>
 
+            <!-- Alertas -->
+            @if(session('success'))
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            @endif
+
+            @if(session('error'))
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    {{ session('error') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            @endif
+
             <!-- Formulario -->
             <div class="row justify-content-center">
                 <div class="col-lg-8">
@@ -183,6 +198,22 @@ document.addEventListener('DOMContentLoaded', function() {
             stockActual.setCustomValidity('El stock actual no puede ser mayor al máximo');
         } else {
             stockActual.setCustomValidity('');
+        }
+
+        // Mostrar advertencia si el stock actual es menor o igual al mínimo
+        const warningDiv = document.getElementById('stock-warning');
+        if (actual > 0 && minimo > 0 && actual <= minimo) {
+            if (!warningDiv) {
+                const warning = document.createElement('div');
+                warning.id = 'stock-warning';
+                warning.className = 'alert alert-warning mt-2';
+                warning.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Advertencia: El stock actual está en nivel bajo';
+                stockActual.parentNode.appendChild(warning);
+            }
+        } else {
+            if (warningDiv) {
+                warningDiv.remove();
+            }
         }
     }
 
