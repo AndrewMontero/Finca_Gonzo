@@ -10,14 +10,6 @@ class Cliente extends Model
     use HasFactory;
 
     protected $fillable = [
-        'nombre',
-        'telefono',
-        'correo',
-        'ubicacion',
+        'nombre', 'correo', 'telefono', 'ubicacion',
     ];
-
-    public function entregas()
-    {
-        return $this->hasMany(Entrega::class);
-    }
 }

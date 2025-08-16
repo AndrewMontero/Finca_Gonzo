@@ -7,34 +7,46 @@ use Illuminate\Http\Request;
 
 class ClienteController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $clientes = Cliente::all();
-        return view('clientes.index', compact('clientes'));
+        $q = trim((string) $request->get('q', ''));
+
+        $clientes = Cliente::query()
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($w) use ($q) {
+                    $w->where('nombre', 'like', "%{$q}%")
+                      ->orWhere('correo', 'like', "%{$q}%")
+                      ->orWhere('telefono', 'like', "%{$q}%")
+                      ->orWhere('ubicacion', 'like', "%{$q}%");
+                });
+            })
+            ->orderBy('nombre')
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('clientes.index', compact('clientes', 'q'));
     }
 
     public function create()
     {
-        return view('clientes.create');
+        $cliente = new Cliente();
+        return view('clientes.create', compact('cliente'));
     }
 
     public function store(Request $request)
     {
-        $request->validate([
-            'nombre' => 'required|string|max:255',
-            'correo' => 'required|email|unique:clientes,correo',
-            'telefono' => 'nullable|string|max:20',
-            'ubicacion' => 'nullable|string|max:255',
+        $data = $request->validate([
+            'nombre'   => ['required', 'string', 'max:150'],
+            'correo'   => ['nullable', 'email', 'max:150'],
+            'telefono' => ['nullable', 'string', 'max:30'],
+            'ubicacion'=> ['nullable', 'string', 'max:150'],
         ]);
 
-        Cliente::create($request->all());
+        Cliente::create($data);
 
-        return redirect()->route('clientes.index')->with('success', 'Cliente creado correctamente.');
-    }
-
-    public function show(Cliente $cliente)
-    {
-        return view('clientes.show', compact('cliente'));
+        return redirect()
+            ->route('clientes.index', ['q' => $request->get('q')])
+            ->with('success', 'Cliente creado correctamente.');
     }
 
     public function edit(Cliente $cliente)
@@ -44,21 +56,26 @@ class ClienteController extends Controller
 
     public function update(Request $request, Cliente $cliente)
     {
-        $request->validate([
-            'nombre' => 'required|string|max:255',
-            'correo' => 'required|email|unique:clientes,correo,' . $cliente->id,
-            'telefono' => 'nullable|string|max:20',
-            'ubicacion' => 'nullable|string|max:255',
+        $data = $request->validate([
+            'nombre'   => ['required', 'string', 'max:150'],
+            'correo'   => ['nullable', 'email', 'max:150'],
+            'telefono' => ['nullable', 'string', 'max:30'],
+            'ubicacion'=> ['nullable', 'string', 'max:150'],
         ]);
 
-        $cliente->update($request->all());
+        $cliente->update($data);
 
-        return redirect()->route('clientes.index')->with('success', 'Cliente actualizado correctamente.');
+        return redirect()
+            ->route('clientes.index', ['q' => $request->get('q')])
+            ->with('success', 'Cliente actualizado correctamente.');
     }
 
     public function destroy(Cliente $cliente)
     {
         $cliente->delete();
-        return redirect()->route('clientes.index')->with('success', 'Cliente eliminado correctamente.');
+
+        return redirect()
+            ->route('clientes.index')
+            ->with('success', 'Cliente eliminado correctamente.');
     }
 }

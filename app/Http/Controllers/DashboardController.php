@@ -59,3 +59,22 @@ class DashboardController extends Controller
         ));
     }
 }
+
+use Illuminate\Support\Facades\Schema;
+
+
+$topProductos = collect();
+
+if (Schema::hasTable('productos') && Schema::hasTable('entregas') && Schema::hasTable('detalle_entregas')) {
+    $topProductos = DB::table('productos')
+        ->select('productos.*')
+        ->selectSub(function ($q) {
+            $q->from('entregas')
+                ->join('detalle_entregas', 'entregas.id', '=', 'detalle_entregas.entrega_id')
+                ->whereColumn('productos.id', 'detalle_entregas.producto_id')
+                ->selectRaw('COUNT(*)');
+        }, 'entregas_count')
+        ->orderByDesc('entregas_count')
+        ->limit(5)
+        ->get();
+}

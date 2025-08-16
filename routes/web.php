@@ -28,6 +28,9 @@ Route::get('/', function () {
 | Rutas autenticadas (usuario logueado y verificado)
 |--------------------------------------------------------------------------
 */
+//Clienetes
+Route::resource('clientes', ClienteController::class)->middleware(['auth']);
+
 Route::middleware(['auth', 'verified'])->group(function () {
 
     // Dashboard
