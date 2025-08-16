@@ -5,7 +5,7 @@
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h1 class="h4 mb-0">Nueva Factura</h1>
-        <a href="{{ route('facturas.index') }}" class="btn btn-outline-secondary">Volver</a>
+        <a href="{{ route('facturas.index') }}" class="btn btn-outline-secondary">Ver Facturas</a>
     </div>
 
     {{-- Mostrar errores si existen --}}

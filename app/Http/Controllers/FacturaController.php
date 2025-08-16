@@ -5,24 +5,32 @@ namespace App\Http\Controllers;
 use App\Models\Factura;
 use App\Models\Entrega;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use PDF;     // barryvdh/laravel-dompdf
+use Mail;    // envío de mails si lo usas
+use App\Mail\FacturaMail;
+
 
 class FacturaController extends Controller
 {
     /**
-     * Listado básico de facturas
+     * Listado de facturas
      */
     public function index()
     {
-        $facturas = Factura::with('entrega')->orderByDesc('created_at')->paginate(10);
+        // Trae entrega, cliente y productos para que el dashboard tenga todo
+        $facturas = Factura::with(['entrega.cliente', 'entrega.productos'])
+            ->orderByDesc('created_at')
+            ->paginate(10);
+
         return view('facturas.index', compact('facturas'));
     }
 
     /**
-     * Formulario para crear una factura
+     * Formulario de creación
      */
     public function create()
     {
-        // Intentar cargar clientes y productos si existen esos modelos
         $clientes  = class_exists(\App\Models\Cliente::class)  ? \App\Models\Cliente::orderBy('nombre')->get()   : collect();
         $productos = class_exists(\App\Models\Producto::class) ? \App\Models\Producto::orderBy('nombre')->get() : collect();
 
@@ -30,47 +38,53 @@ class FacturaController extends Controller
     }
 
     /**
-     * Guardar la factura
+     * Guardar factura.
+     * - Crea una Entrega (necesaria para el modelo actual).
+     * - Si llegan productos[] y cantidades[], los adjunta a la entrega.
      */
     public function store(Request $request)
     {
         $data = $request->validate([
-            'cliente_id' => ['nullable', 'integer'],
-            'total'      => ['required', 'numeric', 'min:0'],
-            'subtotal'   => ['required', 'numeric', 'min:0'],
-            'notas'      => ['nullable', 'string', 'max:500'],
-        ], [
-            'total.required' => 'El total es obligatorio.',
-            'total.numeric'  => 'El total debe ser numérico.',
-            'total.min'      => 'El total no puede ser negativo.',
-            'subtotal.required' => 'El subtotal es obligatorio.',
-            'subtotal.numeric'  => 'El subtotal debe ser numérico.',
-            'subtotal.min'      => 'El subtotal no puede ser negativo.',
+            'cliente_id'          => ['nullable', 'integer', 'exists:clientes,id'],
+            'subtotal'            => ['required', 'numeric', 'min:0'],
+            'total'               => ['required', 'numeric', 'min:0'],
+            'productos'           => ['nullable', 'array'],
+            'productos.*'         => ['integer', 'exists:productos,id'],
+            'cantidades'          => ['nullable', 'array'],
+            'cantidades.*'        => ['integer', 'min:1'],
         ]);
 
         try {
-            // 1. PRIMERO: Crear la entrega (obligatoria para la factura)
+            // 1) Crear entrega base
             $entrega = Entrega::create([
-                'cliente_id' => $data['cliente_id'] ?? null,
-                'repartidor_id' => null, // Puedes asignar un repartidor por defecto si quieres
-                'fecha_hora' => now(),
-                'estado' => 'pendiente', // o el estado que manejes
+                'cliente_id'    => $data['cliente_id'] ?? null,
+                'repartidor_id' => null,
+                'fecha_hora'    => now(),
+                'estado'        => 'pendiente',
             ]);
 
-            // 2. SEGUNDO: Crear la factura asociada a la entrega
+            // 2) Adjuntar productos (opcional)
+            if (!empty($data['productos']) && !empty($data['cantidades'])) {
+                $sync = [];
+                foreach ($data['productos'] as $i => $productoId) {
+                    $cantidad = (int)($data['cantidades'][$i] ?? 1);
+                    $sync[$productoId] = ['cantidad' => $cantidad];
+                }
+                $entrega->productos()->sync($sync);
+            }
+
+            // 3) Crear factura
             $factura = Factura::create([
-                'entrega_id' => $entrega->id, // ✅ ESTO es lo que faltaba
+                'entrega_id' => $entrega->id,
                 'subtotal'   => $data['subtotal'],
                 'total'      => $data['total'],
             ]);
 
-            // ✅ REDIRIGIR a la lista de facturas con mensaje de éxito
             return redirect()
                 ->route('facturas.index')
                 ->with('success', 'Factura creada correctamente (ID: '.$factura->id.').');
 
         } catch (\Exception $e) {
-            // Si algo falla, regresar con error
             return back()
                 ->withInput()
                 ->with('error', 'Error al crear la factura: ' . $e->getMessage());
@@ -78,11 +92,58 @@ class FacturaController extends Controller
     }
 
     /**
-     * (Opcional) Detalle simple de una factura
+     * Detalle de una factura
      */
     public function show(Factura $factura)
     {
-        $factura->load('entrega.cliente'); // Cargar relaciones
+        $factura->load(['entrega.cliente', 'entrega.productos']);
         return view('facturas.show', compact('factura'));
+    }
+
+    /**
+     * PDF (vista previa/impresión)
+     */
+    public function print(Factura $factura)
+    {
+        $factura->load(['entrega.cliente', 'entrega.productos']);
+        $pdf = PDF::loadView('facturas.pdf', ['factura' => $factura])->setPaper('letter');
+
+        return $pdf->stream('factura-' . $factura->id . '.pdf');
+    }
+
+    /**
+     * Enviar por correo (adjunta el PDF)
+     */
+    public function email(Factura $factura)
+    {
+        $factura->load(['entrega.cliente', 'entrega.productos']);
+
+        $cliente = optional(optional($factura->entrega)->cliente);
+        $correo  = $cliente->correo ?? null;
+
+        if (!$correo) {
+            return back()->with('error', 'No hay correo de cliente para enviar la factura.');
+        }
+
+        $pdfBinary = PDF::loadView('facturas.pdf', ['factura' => $factura])
+                        ->setPaper('letter')
+                        ->output();
+
+        Mail::to($correo)->send(new FacturaMail($factura, $pdfBinary));
+
+        return back()->with('success', 'Factura enviada a ' . $correo);
+    }
+     /**
+     * 👉 Eliminar factura
+     */
+    public function destroy(Factura $factura): RedirectResponse
+    {
+        // Solo borramos la factura. Si quieres, podrías decidir también
+        // borrar la entrega asociada si no se usa en otro lado.
+        $factura->delete();
+
+        return redirect()
+            ->route('facturas.index')
+            ->with('success', 'Factura eliminada correctamente.');
     }
 }

@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ReportesController;
 use App\Http\Controllers\ProfileController;
@@ -12,6 +11,7 @@ use App\Http\Controllers\FacturaController;
 use App\Http\Controllers\AuditoriaController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\DetalleEntregaController;
+use App\Http\Controllers\MaintenanceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -31,6 +31,17 @@ Route::get('/', function () {
 //Clienetes
 Route::resource('clientes', ClienteController::class)->middleware(['auth']);
 
+//Facturas
+Route::resource('facturas', FacturaController::class)->middleware(['auth']);
+
+Route::get('facturas/{factura}/print', [FacturaController::class, 'print'])
+    ->name('facturas.print')->middleware(['auth']);
+
+Route::post('facturas/{factura}/email', [FacturaController::class, 'email'])
+    ->name('facturas.email')->middleware(['auth']);
+
+// 👉 Eliminar factura
+Route::delete('/facturas/{factura}',    [FacturaController::class, 'destroy'])->name('facturas.destroy');
 Route::middleware(['auth', 'verified'])->group(function () {
 
     // Dashboard
@@ -82,5 +93,15 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::resource('usuarios', UserController::class);
     Route::resource('auditorias', AuditoriaController::class)->only(['index', 'destroy']);
 });
+
+
+
+// Ajustar el siguiente ID (AUTO_INCREMENT)
+Route::post('/admin/reseed/facturas', [MaintenanceController::class, 'reseedFacturas'])->name('admin.reseed.facturas');
+Route::post('/admin/reseed/entregas', [MaintenanceController::class, 'reseedEntregas'])->name('admin.reseed.entregas');
+
+// routes/web.php
+Route::delete('/facturas/{factura}', [\App\Http\Controllers\FacturaController::class, 'destroy'])
+    ->name('facturas.destroy');
 
 require __DIR__ . '/auth.php';
