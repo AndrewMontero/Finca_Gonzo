@@ -12,26 +12,20 @@ class FacturaMail extends Mailable
     use Queueable, SerializesModels;
 
     public Factura $factura;
-    public string $pdfBytes;
+    public string $pdfBinary;
 
-   
-public function __construct(Factura $factura, string $pdfBinary) {
-     $this->factura  = $factura->load('entrega.cliente');
-        $this->pdfBytes = $pdfBinary;
-}
-
-    public function build()
+    public function __construct(Factura $factura, string $pdfBinary)
     {
-        $cliente = optional(optional($this->factura->entrega)->cliente);
-        $subject = 'Factura #'.$this->factura->id.( $cliente->nombre ? ' - '.$cliente->nombre : '' );
+        $this->factura   = $factura;
+        $this->pdfBinary = $pdfBinary;
+    }
 
-        return $this->subject($subject)
-            ->view('emails.factura')
-            ->with(['factura' => $this->factura])
-            ->attachData(
-                $this->pdfBytes,
-                'factura-'.$this->factura->id.'.pdf',
-                ['mime' => 'application/pdf']
-            );
+    public function build(): self
+    {
+        $nombrePdf = 'factura-' . $this->factura->id . '.pdf';
+
+        return $this->subject('Factura #' . $this->factura->id)
+            ->view('facturas.email') // vista simple del cuerpo del correo
+            ->attachData($this->pdfBinary, $nombrePdf, ['mime' => 'application/pdf']);
     }
 }

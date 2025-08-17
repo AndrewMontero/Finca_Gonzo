@@ -105,3 +105,5 @@ Route::delete('/facturas/{factura}', [\App\Http\Controllers\FacturaController::c
     ->name('facturas.destroy');
 
 require __DIR__ . '/auth.php';
+Route::post('facturas/{factura}/email', [\App\Http\Controllers\FacturaController::class, 'email'])
+    ->name('facturas.email');
