@@ -4,25 +4,38 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Auth;
+use Symfony\Component\HttpFoundation\Response;
 
 class RoleMiddleware
 {
     /**
-     * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * Uso:
+     *   ->middleware('role:admin')
+     *   ->middleware('role:admin,repartidor')
+     *   ->middleware('role:admin|repartidor')
      */
     public function handle(Request $request, Closure $next, ...$roles): Response
     {
-        // Verificar si el usuario está autenticado
         if (!Auth::check()) {
             return redirect()->route('login');
         }
 
-        // Verificar si el rol del usuario está en la lista de roles permitidos
-        if (!in_array(Auth::user()->rol, $roles)) {
+        // Normaliza "admin,repartidor" o "admin|repartidor"
+        $allowed = [];
+        foreach ($roles as $r) {
+            foreach (preg_split('/[,\|]/', (string) $r) as $piece) {
+                $piece = trim($piece);
+                if ($piece !== '') $allowed[] = $piece;
+            }
+        }
+
+        if (empty($allowed)) {
+            abort(403, 'Acceso no autorizado');
+        }
+
+        $userRole = (string) (Auth::user()->rol ?? '');
+        if ($userRole === '' || !in_array($userRole, $allowed, true)) {
             abort(403, 'Acceso no autorizado');
         }
 

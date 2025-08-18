@@ -2,63 +2,40 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    // ✅ Listado con búsqueda simple
+    public function index(Request $request)
     {
-        //
+        $q = trim($request->get('q', ''));
+
+        $users = User::query()
+            ->when($q, function ($query) use ($q) {
+                $query->where('name', 'like', "%{$q}%")
+                    ->orWhere('email', 'like', "%{$q}%");
+            })
+            ->orderBy('name')
+            ->paginate(10)
+            ->withQueryString();
+
+        // Roles permitidos en el select
+        $roles = ['cliente' => 'Cliente', 'repartidor' => 'Repartidor', 'admin' => 'Admin'];
+
+        return view('admin.users.index', compact('users', 'roles', 'q'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    // ✅ Cambiar el rol (cliente <-> repartidor, y también admin si lo necesitas)
+    public function updateRole(Request $request, \App\Models\User $user)
     {
-        //
-    }
+        $data = $request->validate([
+            'rol' => ['required', 'in:cliente,repartidor,admin'],
+        ]);
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
+        $user->update(['rol' => $data['rol']]);
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
+        return back()->with('success', 'Rol actualizado.');
     }
 }
