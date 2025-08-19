@@ -6,15 +6,22 @@ use App\Models\Entrega;
 use App\Models\Producto;
 use App\Models\Factura;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;   // 👈 IMPORTANTE
+use Illuminate\Support\Facades\Route;  // 👈 IMPORTANTE
 
 class DashboardController extends Controller
 {
     public function index()
     {
+        // ✅ Si el usuario es CLIENTE, redirigir siempre a la Tienda
+        if (Auth::check() && (Auth::user()->rol ?? null) === 'cliente' && Route::has('tienda.index')) {
+            return redirect()->route('tienda.index');
+        }
+
         // KPIs
-        $totalVentas          = (float) Factura::sum('total');
-        $entregasCompletadas  = Entrega::where('estado', 'realizada')->count(); // ✅
-        $entregasPendientes   = Entrega::where('estado', 'pendiente')->count(); // ✅
+        $totalVentas         = (float) Factura::sum('total');
+        $entregasCompletadas = Entrega::where('estado', 'realizada')->count();
+        $entregasPendientes  = Entrega::where('estado', 'pendiente')->count();
 
         // Productos con bajo stock
         $productosBajoStock = Producto::whereColumn('stock_actual', '<=', 'stock_minimo')
@@ -22,7 +29,7 @@ class DashboardController extends Controller
             ->take(10)
             ->get();
 
-        // Top 5 productos más vendidos (si tu relación se llama 'entregas')
+        // Top 5 productos más vendidos
         $productosMasVendidos = Producto::withCount('entregas')
             ->orderByDesc('entregas_count')
             ->take(5)

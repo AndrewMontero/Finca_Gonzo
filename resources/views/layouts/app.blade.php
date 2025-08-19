@@ -57,12 +57,7 @@
                     @auth
                         @if($esCliente)
                             {{-- ================== MENÚ PARA CLIENTE ================== --}}
-                            <li>
-                                <a href="{{ route('tienda.index') }}"
-                                   class="px-2 py-1 rounded hover:bg-green-700 {{ request()->routeIs('tienda.*') ? 'bg-green-700' : '' }}">
-                                    Tienda
-                                </a>
-                            </li>
+                           
                             <li>
                                 <a href="{{ route('tienda.carrito') }}"
                                    class="px-2 py-1 rounded hover:bg-green-700 {{ request()->routeIs('tienda.carrito') ? 'bg-green-700' : '' }}">
