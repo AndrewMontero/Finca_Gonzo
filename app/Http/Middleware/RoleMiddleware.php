@@ -10,10 +10,14 @@ use Symfony\Component\HttpFoundation\Response;
 class RoleMiddleware
 {
     /**
-     * Uso:
-     *   ->middleware('role:admin')
-     *   ->middleware('role:admin,repartidor')
-     *   ->middleware('role:admin|repartidor')
+     * Restringe acceso por rol.
+     *
+     * Se puede invocar:
+     *   - Por alias: 'role:admin'    (si usas el alias en Kernel)
+     *   - Por clase: RoleMiddleware::class . ':admin'  ✅ (recomendado para evitar caché de alias)
+     *
+     * Acepta varios roles:
+     *   'admin,repartidor' o 'admin|repartidor'
      */
     public function handle(Request $request, Closure $next, ...$roles): Response
     {
@@ -21,12 +25,14 @@ class RoleMiddleware
             return redirect()->route('login');
         }
 
-        // Normaliza "admin,repartidor" o "admin|repartidor"
+        // Normaliza los roles recibidos (coma o pipe)
         $allowed = [];
         foreach ($roles as $r) {
             foreach (preg_split('/[,\|]/', (string) $r) as $piece) {
                 $piece = trim($piece);
-                if ($piece !== '') $allowed[] = $piece;
+                if ($piece !== '') {
+                    $allowed[] = $piece;
+                }
             }
         }
 

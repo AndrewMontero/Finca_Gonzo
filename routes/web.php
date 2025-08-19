@@ -18,6 +18,9 @@ use App\Http\Controllers\MaintenanceController;
 // Auth (único)
 use App\Http\Controllers\Auth\CustomAuthController;
 
+// ✅ Importa la clase del middleware de rol (para usarlo por clase)
+use App\Http\Middleware\RoleMiddleware;
+
 // -----------------------------------------------------
 // Público
 // -----------------------------------------------------
@@ -38,42 +41,32 @@ Route::middleware('guest')->group(function () {
 // Autenticados
 // -----------------------------------------------------
 Route::middleware(['auth', 'verified'])->group(function () {
-
-    // Logout
     Route::post('/logout', [CustomAuthController::class, 'logout'])->name('logout');
 
-    // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Perfil
-    Route::get('/profile',  [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::get('/profile',   [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::delete('/profile',[ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Clientes
     Route::resource('clientes', ClienteController::class);
 
-    // Entregas y detalle
     Route::resource('entregas', EntregaController::class);
     Route::resource('detalle-entregas', DetalleEntregaController::class);
 
-    // Facturas
     Route::resource('facturas', FacturaController::class)->only(['index', 'create', 'store', 'show']);
     Route::get('facturas/{factura}/print', [FacturaController::class, 'print'])->name('facturas.print');
     Route::post('facturas/{factura}/email', [FacturaController::class, 'email'])->name('facturas.email');
     Route::delete('facturas/{factura}',   [FacturaController::class, 'destroy'])->name('facturas.destroy');
 
-    // (si usas generación por entrega)
     Route::get('/facturas/{entrega}/pdf', [FacturaController::class, 'generarFactura'])->name('facturas.pdf');
 
-    // Reportes
-    Route::get('/reportes',                [ReportesController::class, 'index'])->name('reportes.index');
-    Route::get('/reportes/ventas',         [ReportesController::class, 'reporteVentas'])->name('reportes.ventas');
-    Route::get('/reportes/ventas/csv',     [ReportesController::class, 'exportVentasCsv'])->name('reportes.ventas.csv');
-    Route::get('/reportes/entregas',       [ReportesController::class, 'reporteEntregas'])->name('reportes.entregas');
-    Route::get('/reportes/productos',      [ReportesController::class, 'reporteProductos'])->name('reportes.productos');
+    Route::get('/reportes',            [ReportesController::class, 'index'])->name('reportes.index');
+    Route::get('/reportes/ventas',     [ReportesController::class, 'reporteVentas'])->name('reportes.ventas');
+    Route::get('/reportes/ventas/csv', [ReportesController::class, 'exportVentasCsv'])->name('reportes.ventas.csv');
+    Route::get('/reportes/entregas',   [ReportesController::class, 'reporteEntregas'])->name('reportes.entregas');
+    Route::get('/reportes/productos',  [ReportesController::class, 'reporteProductos'])->name('reportes.productos');
 
-    // Productos
     Route::resource('productos', ProductoController::class);
     Route::get('productos-stock-bajo', [ProductoController::class, 'stockBajo'])->name('productos.stock-bajo');
     Route::get('api/productos',        [ProductoController::class, 'api'])->name('productos.api');
@@ -84,13 +77,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 // -----------------------------------------------------
-// Admin (rol: admin) — con prefijo y namespacing en rutas
+// Admin (rol: admin)
 // -----------------------------------------------------
-Route::middleware(['auth', 'role:admin'])
+// ✅ Usamos el middleware por CLASE para evitar el alias 'role' y su caché.
+//    IMPORTANTE: concatenamos ':admin' para pasar el parámetro del rol.
+Route::middleware(['auth', RoleMiddleware::class . ':admin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
-
         // Usuarios (listado + cambio de rol)
         Route::get('/users',               [UserController::class, 'index'])->name('users.index');
         Route::patch('/users/{user}/role', [UserController::class, 'updateRole'])->name('users.role');
