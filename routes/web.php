@@ -14,6 +14,7 @@ use App\Http\Controllers\AuditoriaController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\DetalleEntregaController;
 use App\Http\Controllers\MaintenanceController;
+use App\Http\Controllers\TiendaController;
 
 // Auth (único)
 use App\Http\Controllers\Auth\CustomAuthController;
@@ -99,4 +100,16 @@ Route::middleware(['auth', RoleMiddleware::class . ':admin'])
 
 // Cambio rápido de estado (no toca productos ni fechas)
 Route::patch('entregas/{entrega}/estado', [\App\Http\Controllers\EntregaController::class, 'updateEstado'])
-     ->name('entregas.estado');
+    ->name('entregas.estado');
+
+
+//Rutas para clientes
+Route::middleware(['auth', 'verified'])->group(function () {
+    // Tienda (cliente)
+    Route::get('/tienda',                   [TiendaController::class, 'catalogo'])->name('tienda.index');
+    Route::post('/tienda/agregar/{producto}', [TiendaController::class, 'agregar'])->name('tienda.agregar');
+
+    Route::get('/carrito',                  [TiendaController::class, 'carrito'])->name('tienda.carrito');
+    Route::post('/carrito/actualizar',      [TiendaController::class, 'actualizar'])->name('tienda.carrito.actualizar');
+    Route::post('/carrito/finalizar',       [TiendaController::class, 'finalizar'])->name('tienda.finalizar');
+});

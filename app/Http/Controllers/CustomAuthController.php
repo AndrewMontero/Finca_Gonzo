@@ -28,7 +28,14 @@ class CustomAuthController extends Controller
 
         if (Auth::attempt($credentials, $remember)) {
             $request->session()->regenerate();
-            return redirect()->intended(route('dashboard'));
+
+            // 👇 redirección según rol (cliente -> tienda, otros -> dashboard)
+            $user = auth()->user();
+            $destino = ($user && $user->rol === 'cliente' && \Route::has('tienda.index'))
+                ? route('tienda.index')
+                : route('dashboard');
+
+            return redirect()->intended($destino); // mantiene intended si viene de middleware
         }
 
         return back()->withErrors([
@@ -48,7 +55,7 @@ class CustomAuthController extends Controller
         $data = $request->validate([
             'name'     => ['required','string','max:100'],
             'email'    => ['required','email','max:150','unique:users,email'],
-            'password' => ['required','string','min:6','confirmed'], // password_confirmation
+            'password' => ['required','string','min:6','confirmed'],
         ]);
 
         $user = User::create([
@@ -60,7 +67,11 @@ class CustomAuthController extends Controller
 
         Auth::login($user);
 
-        return redirect()->route('dashboard')->with('success','Cuenta creada correctamente.');
+        // 👇 tras registrarse, cliente va a tienda (si existe); fallback a dashboard
+        $destino = \Route::has('tienda.index') ? route('tienda.index') : route('dashboard');
+
+        return redirect()->route($destino === route('dashboard') ? 'dashboard' : 'tienda.index')
+                         ->with('success','Cuenta creada correctamente.');
     }
 
     // POST /logout

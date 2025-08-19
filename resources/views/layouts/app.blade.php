@@ -20,12 +20,14 @@
 
     {{-- =========================================================
          Mostrar NAVBAR/FOOTER solo si NO estamos en auth pages
-         (login, register, password.*)
          ========================================================= --}}
     @php
         $esAuthPage = request()->routeIs('login') ||
                       request()->routeIs('register') ||
                       request()->routeIs('password.*');
+
+        $rolUsuario = auth()->check() ? (auth()->user()->rol ?? null) : null;   // 👈 rol actual
+        $esCliente  = $rolUsuario === 'cliente';                                 // 👈 flag cliente
     @endphp
 
     @unless($esAuthPage)
@@ -43,48 +45,66 @@
                         <i class="bi bi-arrow-right-circle-fill fs-4"></i>
                     </button>
 
-                    {{-- Brand -> Dashboard --}}
-                    <a href="{{ route('dashboard') }}" class="font-bold text-lg hover:opacity-90">
+                    {{-- Brand -> si es cliente va a Tienda; si no, Dashboard --}}
+                    <a href="{{ $esCliente && Route::has('tienda.index') ? route('tienda.index') : route('dashboard') }}"
+                       class="font-bold text-lg hover:opacity-90">
                         Finca Gonzo
                     </a>
                 </div>
 
                 {{-- MENÚ DESKTOP --}}
                 <ul class="hidden md:flex items-center gap-4 mb-0">
-                    <li>
-                        <a href="{{ route('clientes.index') }}"
-                           class="px-2 py-1 rounded hover:bg-green-700 {{ request()->routeIs('clientes.*') ? 'bg-green-700' : '' }}">
-                            Clientes
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('productos.index') }}"
-                           class="px-2 py-1 rounded hover:bg-green-700 {{ request()->routeIs('productos.*') ? 'bg-green-700' : '' }}">
-                            Productos
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('entregas.index') }}"
-                           class="px-2 py-1 rounded hover:bg-green-700 {{ request()->routeIs('entregas.*') ? 'bg-green-700' : '' }}">
-                            Entregas
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('facturas.index') }}"
-                           class="px-2 py-1 rounded hover:bg-green-700 {{ request()->routeIs('facturas.*') ? 'bg-green-700' : '' }}">
-                            Facturas
-                        </a>
-                    </li>
-
-                    {{-- Solo ADMIN: Usuarios --}}
                     @auth
-                        @if(auth()->user()->rol === 'admin')
+                        @if($esCliente)
+                            {{-- ================== MENÚ PARA CLIENTE ================== --}}
                             <li>
-                                <a href="{{ route('admin.users.index') }}"
-                                   class="px-2 py-1 rounded hover:bg-green-700 {{ request()->routeIs('admin.users.*') ? 'bg-green-700' : '' }}">
-                                    <i class="bi bi-people me-1"></i> Usuarios
+                                <a href="{{ route('tienda.index') }}"
+                                   class="px-2 py-1 rounded hover:bg-green-700 {{ request()->routeIs('tienda.*') ? 'bg-green-700' : '' }}">
+                                    Tienda
                                 </a>
                             </li>
+                            <li>
+                                <a href="{{ route('tienda.carrito') }}"
+                                   class="px-2 py-1 rounded hover:bg-green-700 {{ request()->routeIs('tienda.carrito') ? 'bg-green-700' : '' }}">
+                                    Carrito
+                                </a>
+                            </li>
+                        @else
+                            {{-- ============== MENÚ PARA ADMIN/REPARTIDOR/etc ============== --}}
+                            <li>
+                                <a href="{{ route('clientes.index') }}"
+                                   class="px-2 py-1 rounded hover:bg-green-700 {{ request()->routeIs('clientes.*') ? 'bg-green-700' : '' }}">
+                                    Clientes
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('productos.index') }}"
+                                   class="px-2 py-1 rounded hover:bg-green-700 {{ request()->routeIs('productos.*') ? 'bg-green-700' : '' }}">
+                                    Productos
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('entregas.index') }}"
+                                   class="px-2 py-1 rounded hover:bg-green-700 {{ request()->routeIs('entregas.*') ? 'bg-green-700' : '' }}">
+                                    Entregas
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('facturas.index') }}"
+                                   class="px-2 py-1 rounded hover:bg-green-700 {{ request()->routeIs('facturas.*') ? 'bg-green-700' : '' }}">
+                                    Facturas
+                                </a>
+                            </li>
+
+                            {{-- Solo ADMIN: Usuarios --}}
+                            @if($rolUsuario === 'admin')
+                                <li>
+                                    <a href="{{ route('admin.users.index') }}"
+                                       class="px-2 py-1 rounded hover:bg-green-700 {{ request()->routeIs('admin.users.*') ? 'bg-green-700' : '' }}">
+                                        <i class="bi bi-people me-1"></i> Usuarios
+                                    </a>
+                                </li>
+                            @endif
                         @endif
                     @endauth
                 </ul>
@@ -132,30 +152,43 @@
         {{-- MENÚ MÓVIL --}}
         <div id="mobileMenu" class="md:hidden hidden border-t border-green-500">
             <div class="px-4 py-3 space-y-2">
-                <a href="{{ route('clientes.index') }}"
-                   class="block px-3 py-2 rounded hover:bg-green-700 {{ request()->routeIs('clientes.*') ? 'bg-green-700' : '' }}">
-                    Clientes
-                </a>
-                <a href="{{ route('productos.index') }}"
-                   class="block px-3 py-2 rounded hover:bg-green-700 {{ request()->routeIs('productos.*') ? 'bg-green-700' : '' }}">
-                    Productos
-                </a>
-                <a href="{{ route('entregas.index') }}"
-                   class="block px-3 py-2 rounded hover:bg-green-700 {{ request()->routeIs('entregas.*') ? 'bg-green-700' : '' }}">
-                    Entregas
-                </a>
-                <a href="{{ route('facturas.index') }}"
-                   class="block px-3 py-2 rounded hover:bg-green-700 {{ request()->routeIs('facturas.*') ? 'bg-green-700' : '' }}">
-                    Facturas
-                </a>
 
-                {{-- Solo ADMIN en móvil: Usuarios --}}
                 @auth
-                    @if(auth()->user()->rol === 'admin')
-                        <a href="{{ route('admin.users.index') }}"
-                           class="block px-3 py-2 rounded hover:bg-green-700 {{ request()->routeIs('admin.users.*') ? 'bg-green-700' : '' }}">
-                            <i class="bi bi-people me-1"></i> Usuarios
+                    @if($esCliente)
+                        {{-- ================== MÓVIL: CLIENTE ================== --}}
+                        <a href="{{ route('tienda.index') }}"
+                           class="block px-3 py-2 rounded hover:bg-green-700 {{ request()->routeIs('tienda.*') ? 'bg-green-700' : '' }}">
+                            Tienda
                         </a>
+                        <a href="{{ route('tienda.carrito') }}"
+                           class="block px-3 py-2 rounded hover:bg-green-700 {{ request()->routeIs('tienda.carrito') ? 'bg-green-700' : '' }}">
+                            Carrito
+                        </a>
+                    @else
+                        {{-- ============== MÓVIL: ADMIN/REPARTIDOR/etc ============== --}}
+                        <a href="{{ route('clientes.index') }}"
+                           class="block px-3 py-2 rounded hover:bg-green-700 {{ request()->routeIs('clientes.*') ? 'bg-green-700' : '' }}">
+                            Clientes
+                        </a>
+                        <a href="{{ route('productos.index') }}"
+                           class="block px-3 py-2 rounded hover:bg-green-700 {{ request()->routeIs('productos.*') ? 'bg-green-700' : '' }}">
+                            Productos
+                        </a>
+                        <a href="{{ route('entregas.index') }}"
+                           class="block px-3 py-2 rounded hover:bg-green-700 {{ request()->routeIs('entregas.*') ? 'bg-green-700' : '' }}">
+                            Entregas
+                        </a>
+                        <a href="{{ route('facturas.index') }}"
+                           class="block px-3 py-2 rounded hover:bg-green-700 {{ request()->routeIs('facturas.*') ? 'bg-green-700' : '' }}">
+                            Facturas
+                        </a>
+
+                        @if($rolUsuario === 'admin')
+                            <a href="{{ route('admin.users.index') }}"
+                               class="block px-3 py-2 rounded hover:bg-green-700 {{ request()->routeIs('admin.users.*') ? 'bg-green-700' : '' }}">
+                                <i class="bi bi-people me-1"></i> Usuarios
+                            </a>
+                        @endif
                     @endif
                 @endauth
 
