@@ -9,6 +9,7 @@ class Entrega extends Model
 {
     use HasFactory;
 
+    // ✅ IMPORTANTE: 'estado' debe estar en fillable
     protected $fillable = [
         'cliente_id',
         'repartidor_id',
@@ -16,30 +17,27 @@ class Entrega extends Model
         'estado',
     ];
 
-    // Cast para fechas
+    // Cast para manejar fecha como instancia Carbon
     protected $casts = [
         'fecha_hora' => 'datetime',
     ];
 
-    // Relación con Cliente
-    public function cliente()
-    {
-        return $this->belongsTo(Cliente::class);
+    // --- Relaciones ---
+    public function cliente()   
+    { 
+        return $this->belongsTo(Cliente::class); 
     }
-
-    // Relación con Repartidor (User)
+    
     public function repartidor()
-    {
-        return $this->belongsTo(User::class, 'repartidor_id');
+    { 
+        return $this->belongsTo(User::class, 'repartidor_id'); 
+    }
+    
+    public function factura()   
+    { 
+        return $this->hasOne(Factura::class); 
     }
 
-    // Relación con Factura
-    public function factura()
-    {
-        return $this->hasOne(Factura::class);
-    }
-
-    // Relación con Productos (muchos a muchos)
     public function productos()
     {
         return $this->belongsToMany(Producto::class, 'detalle_entrega')
@@ -47,69 +45,58 @@ class Entrega extends Model
                     ->withTimestamps();
     }
 
-    // Accessor para obtener el nombre del repartidor de forma segura
+    // --- Accessors útiles ---
     public function getRepartidorNombreAttribute()
     {
-        return $this->repartidor ? $this->repartidor->name : 'Sin asignar';
+        return $this->repartidor?->name ?? 'Sin asignar';
     }
 
-    // Accessor para obtener el nombre del cliente de forma segura
     public function getClienteNombreAttribute()
     {
-        return $this->cliente ? $this->cliente->nombre : 'Cliente no disponible';
+        return $this->cliente?->nombre ?? 'Cliente no disponible';
     }
 
-    // Accessor para obtener el estado formateado
     public function getEstadoFormateadoAttribute()
     {
         return ucfirst($this->estado);
     }
 
-    // Accessor para obtener la clase CSS del badge según el estado
     public function getEstadoBadgeClassAttribute()
     {
-        switch ($this->estado) {
-            case 'realizada':
-                return 'badge-success';
-            case 'cancelada':
-                return 'badge-danger';
-            case 'pendiente':
-            default:
-                return 'badge-warning';
-        }
+        return match ($this->estado) {
+            'realizada' => 'text-bg-success',
+            'cancelada' => 'text-bg-danger',
+            default     => 'text-bg-warning',
+        };
     }
 
-    // Scope para filtrar por estado
-    public function scopePorEstado($query, $estado)
-    {
-        return $query->where('estado', $estado);
+    // --- Scopes útiles ---
+    public function scopePorEstado($q, $estado)   
+    { 
+        return $q->where('estado', $estado); 
+    }
+    
+    public function scopePendientes($q)           
+    { 
+        return $q->where('estado', 'pendiente'); 
+    }
+    
+    public function scopeRealizadas($q)           
+    { 
+        return $q->where('estado', 'realizada'); 
+    }
+    
+    public function scopeCanceladas($q)           
+    { 
+        return $q->where('estado', 'cancelada'); 
+    }
+    
+    public function scopePorRepartidor($q, $id)   
+    { 
+        return $q->where('repartidor_id', $id); 
     }
 
-    // Scope para filtrar entregas pendientes
-    public function scopePendientes($query)
-    {
-        return $query->where('estado', 'pendiente');
-    }
-
-    // Scope para filtrar entregas realizadas
-    public function scopeRealizadas($query)
-    {
-        return $query->where('estado', 'realizada');
-    }
-
-    // Scope para filtrar entregas canceladas
-    public function scopeCanceladas($query)
-    {
-        return $query->where('estado', 'cancelada');
-    }
-
-    // Scope para filtrar por repartidor
-    public function scopePorRepartidor($query, $repartidorId)
-    {
-        return $query->where('repartidor_id', $repartidorId);
-    }
-
-    // Método para calcular el total de la entrega
+    // --- Lógica de negocio ---
     public function calcularTotal()
     {
         $total = 0;
@@ -120,52 +107,44 @@ class Entrega extends Model
         return $total;
     }
 
-    // Método para verificar si la entrega tiene repartidor asignado
-    public function tieneRepartidor()
-    {
-        return !is_null($this->repartidor_id) && $this->repartidor !== null;
+    public function tieneRepartidor()   
+    { 
+        return !is_null($this->repartidor_id) && $this->repartidor !== null; 
+    }
+    
+    public function puedeSerEditada()   
+    { 
+        return $this->estado !== 'realizada'; 
+    }
+    
+    public function puedeSerCancelada() 
+    { 
+        return $this->estado === 'pendiente'; 
     }
 
-    // Método para verificar si la entrega puede ser editada
-    public function puedeSerEditada()
-    {
-        return $this->estado !== 'realizada';
-    }
-
-    // Método para verificar si la entrega puede ser cancelada
-    public function puedeSerCancelada()
-    {
-        return $this->estado === 'pendiente';
-    }
-
-    // Método para marcar la entrega como realizada
     public function marcarComoRealizada()
     {
         if ($this->estado !== 'realizada') {
             $this->update(['estado' => 'realizada']);
 
-            // Actualizar stock de productos
             foreach ($this->productos as $producto) {
                 $cantidad = $producto->pivot->cantidad;
                 $producto->decrement('stock_actual', $cantidad);
             }
 
-            // Crear factura si no existe
             if (!$this->factura) {
                 $total = $this->calcularTotal();
                 \App\Models\Factura::create([
                     'entrega_id' => $this->id,
-                    'subtotal' => $total,
-                    'total' => $total
+                    'subtotal'   => $total,
+                    'total'      => $total,
                 ]);
             }
-
             return true;
         }
         return false;
     }
 
-    // Método para cancelar la entrega
     public function cancelar()
     {
         if ($this->puedeSerCancelada()) {

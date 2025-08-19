@@ -47,7 +47,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/profile',   [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile',[ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::resource('clientes', ClienteController::class);
 
@@ -96,3 +96,7 @@ Route::middleware(['auth', RoleMiddleware::class . ':admin'])
         Route::post('/reseed/facturas', [MaintenanceController::class, 'reseedFacturas'])->name('reseed.facturas');
         Route::post('/reseed/entregas', [MaintenanceController::class, 'reseedEntregas'])->name('reseed.entregas');
     });
+
+// Cambio rápido de estado (no toca productos ni fechas)
+Route::patch('entregas/{entrega}/estado', [\App\Http\Controllers\EntregaController::class, 'updateEstado'])
+     ->name('entregas.estado');

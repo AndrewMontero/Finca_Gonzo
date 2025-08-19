@@ -12,9 +12,9 @@ class DashboardController extends Controller
     public function index()
     {
         // KPIs
-        $totalVentas = (float) Factura::sum('total');
-        $entregasCompletadas = Entrega::where('estado', 'realizada')->count();
-        $entregasPendientes  = Entrega::where('estado', 'pendiente')->count();
+        $totalVentas          = (float) Factura::sum('total');
+        $entregasCompletadas  = Entrega::where('estado', 'realizada')->count(); // ✅
+        $entregasPendientes   = Entrega::where('estado', 'pendiente')->count(); // ✅
 
         // Productos con bajo stock
         $productosBajoStock = Producto::whereColumn('stock_actual', '<=', 'stock_minimo')
@@ -22,33 +22,31 @@ class DashboardController extends Controller
             ->take(10)
             ->get();
 
-        // Top 5 productos más vendidos por cantidad de entregas
+        // Top 5 productos más vendidos (si tu relación se llama 'entregas')
         $productosMasVendidos = Producto::withCount('entregas')
             ->orderByDesc('entregas_count')
             ->take(5)
             ->get();
 
-        // ---- Ventas por mes (multi-motor) ----
-        $driver = DB::getDriverName();
-        $monthExpr = match ($driver) {
-            'sqlite' => "CAST(strftime('%m', created_at) AS INTEGER)", // 1..12
+        // Ventas por mes
+        $driver   = DB::getDriverName();
+        $monthCol = match ($driver) {
+            'sqlite' => "CAST(strftime('%m', created_at) AS INTEGER)",
             'pgsql'  => "EXTRACT(MONTH FROM created_at)",
-            default  => "MONTH(created_at)", // mysql
+            default  => "MONTH(created_at)",
         };
 
-        $rows = Factura::selectRaw("$monthExpr AS mes, SUM(total) AS total")
+        $rows = Factura::selectRaw("$monthCol AS mes, SUM(total) AS total")
             ->groupBy('mes')
             ->orderBy('mes')
             ->get();
 
-        // Serie fija de 12 meses
         $serie = array_fill(0, 12, 0.0);
         foreach ($rows as $r) {
-            $idx = max(1, min(12, (int)$r->mes)) - 1;
-            $serie[$idx] = (float) $r->total;
+            $i = max(1, min(12, (int) $r->mes)) - 1;
+            $serie[$i] = (float) $r->total;
         }
 
-        // Pasar datos a la vista
         return view('dashboard', compact(
             'totalVentas',
             'entregasCompletadas',
@@ -58,23 +56,4 @@ class DashboardController extends Controller
             'serie'
         ));
     }
-}
-
-use Illuminate\Support\Facades\Schema;
-
-
-$topProductos = collect();
-
-if (Schema::hasTable('productos') && Schema::hasTable('entregas') && Schema::hasTable('detalle_entregas')) {
-    $topProductos = DB::table('productos')
-        ->select('productos.*')
-        ->selectSub(function ($q) {
-            $q->from('entregas')
-                ->join('detalle_entregas', 'entregas.id', '=', 'detalle_entregas.entrega_id')
-                ->whereColumn('productos.id', 'detalle_entregas.producto_id')
-                ->selectRaw('COUNT(*)');
-        }, 'entregas_count')
-        ->orderByDesc('entregas_count')
-        ->limit(5)
-        ->get();
 }
