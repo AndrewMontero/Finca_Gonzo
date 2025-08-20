@@ -19,32 +19,26 @@ class RoleMiddleware
      * Acepta varios roles:
      *   'admin,repartidor' o 'admin|repartidor'
      */
-    public function handle(Request $request, Closure $next, ...$roles): Response
+    public function handle(Request $request, Closure $next, ...$roles)
     {
-        if (!Auth::check()) {
+        // Si no hay usuario autenticado, que pase al middleware 'auth' a fallar
+        if (!auth()->check()) {
             return redirect()->route('login');
         }
 
-        // Normaliza los roles recibidos (coma o pipe)
-        $allowed = [];
-        foreach ($roles as $r) {
-            foreach (preg_split('/[,\|]/', (string) $r) as $piece) {
-                $piece = trim($piece);
-                if ($piece !== '') {
-                    $allowed[] = $piece;
-                }
-            }
+        $rolUsuario = auth()->user()->rol ?? null;
+
+        // Si no se pasó ningún rol, deja continuar (comportamiento permisivo)
+        if (empty($roles)) {
+            return $next($request);
         }
 
-        if (empty($allowed)) {
-            abort(403, 'Acceso no autorizado');
+        // Si el rol del usuario está dentro de los permitidos → OK
+        if (in_array($rolUsuario, $roles, true)) {
+            return $next($request);
         }
 
-        $userRole = (string) (Auth::user()->rol ?? '');
-        if ($userRole === '' || !in_array($userRole, $allowed, true)) {
-            abort(403, 'Acceso no autorizado');
-        }
-
-        return $next($request);
+        // Si no tiene permiso, 403
+        abort(403, 'No tienes permiso para acceder a esta ruta.');
     }
 }

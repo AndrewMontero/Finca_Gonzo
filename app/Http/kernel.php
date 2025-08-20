@@ -43,6 +43,8 @@ class Kernel extends HttpKernel
         'verified'         => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
 
         // ✅ ÚNICO alias de roles que usaremos
-        'role'             => \App\Http\Middleware\RoleMiddleware::class,
+        'role' => \App\Http\Middleware\RoleMiddleware::class,
+
+
     ];
 }

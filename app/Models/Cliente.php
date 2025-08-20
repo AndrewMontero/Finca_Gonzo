@@ -9,7 +9,11 @@ class Cliente extends Model
 {
     use HasFactory;
 
+    // App\Models\Cliente.php
     protected $fillable = [
-        'nombre', 'correo', 'telefono', 'ubicacion',
+        'nombre',
+        'correo',
+        'telefono',
+        'ubicacion',
     ];
 }
