@@ -23,7 +23,7 @@ use App\Http\Controllers\Auth\CustomAuthController;
 // -----------------------------------------------------
 // Público
 // -----------------------------------------------------
-Route::get('/', fn() => view('welcome'));
+Route::get('/', fn() => redirect()->route('login')); // ✅ redirección en vez de vista
 
 // -----------------------------------------------------
 // Invitados (login/registro)
@@ -78,51 +78,37 @@ Route::middleware(['auth', 'verified'])->group(function () {
 // -----------------------------------------------------
 // Admin (rol: admin)
 // -----------------------------------------------------
-// ✅ Usando middleware por CLASE para evitar problemas de caché con alias
-// Concatenamos ':admin' para pasar el parámetro del rol requerido
 Route::middleware(['auth', RoleMiddleware::class . ':admin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
-        // Usuarios (listado + cambio de rol)
         Route::get('/users',               [UserController::class, 'index'])->name('users.index');
         Route::patch('/users/{user}/role', [UserController::class, 'updateRole'])->name('users.role');
 
-        // Auditorías
         Route::resource('auditorias', AuditoriaController::class)->only(['index', 'destroy']);
 
-        // Herramientas de mantenimiento
         Route::post('/reseed/facturas', [MaintenanceController::class, 'reseedFacturas'])->name('reseed.facturas');
         Route::post('/reseed/entregas', [MaintenanceController::class, 'reseedEntregas'])->name('reseed.entregas');
     });
 
 // -----------------------------------------------------
-// Ruta específica para cambio de estado de entregas
+// Cambio de estado de entregas
 // -----------------------------------------------------
-// ✅ Esta ruta necesita autenticación pero no un rol específico (cualquier usuario autenticado)
 Route::middleware(['auth', 'verified'])
     ->patch('entregas/{entrega}/estado', [EntregaController::class, 'updateEstado'])
     ->name('entregas.estado');
 
 // -----------------------------------------------------
-// TIENDA (solo clientes autenticados y verificados)
+// TIENDA (rol: cliente)
 // -----------------------------------------------------
-Route::middleware([
-    'auth',
-    'verified',
-    \App\Http\Middleware\RoleMiddleware::class . ':cliente',
-])->group(function () {
-    Route::get('/tienda',                     [\App\Http\Controllers\TiendaController::class, 'catalogo'])->name('tienda.index');
-    Route::post('/tienda/agregar/{producto}', [\App\Http\Controllers\TiendaController::class, 'agregar'])->name('tienda.agregar');
+Route::middleware(['auth', 'verified', RoleMiddleware::class . ':cliente'])->group(function () {
+    Route::get('/tienda',                     [TiendaController::class, 'catalogo'])->name('tienda.index');
+    Route::post('/tienda/agregar/{producto}', [TiendaController::class, 'agregar'])->name('tienda.agregar');
 
-    Route::get('/carrito',                    [\App\Http\Controllers\TiendaController::class, 'carrito'])->name('tienda.carrito');
-    Route::post('/carrito/actualizar',        [\App\Http\Controllers\TiendaController::class, 'actualizar'])->name('tienda.carrito.actualizar');
+    Route::get('/carrito',                    [TiendaController::class, 'carrito'])->name('tienda.carrito');
+    Route::post('/carrito/actualizar',        [TiendaController::class, 'actualizar'])->name('tienda.carrito.actualizar');
+    Route::post('/carrito/vaciar',            [TiendaController::class, 'vaciarCarrito'])->name('tienda.carrito.vaciar');
+    Route::post('/carrito/finalizar',         [TiendaController::class, 'finalizar'])->name('tienda.finalizar');
 
-    // Mis pedidos (listado del cliente autenticado)
-    Route::get('/mis-pedidos', [TiendaController::class, 'pedidos'])->name('tienda.pedidos');
-
-    // ⬇️ NUEVA: vaciar carrito
-    Route::post('/carrito/vaciar',            [\App\Http\Controllers\TiendaController::class, 'vaciarCarrito'])->name('tienda.carrito.vaciar');
-
-    Route::post('/carrito/finalizar',         [\App\Http\Controllers\TiendaController::class, 'finalizar'])->name('tienda.finalizar');
+    Route::get('/mis-pedidos',                [TiendaController::class, 'pedidos'])->name('tienda.pedidos');
 });

@@ -31,7 +31,8 @@ class ReportesController extends Controller
         if ($desde) $q->whereDate('created_at', '>=', $desde);
         if ($hasta) $q->whereDate('created_at', '<=', $hasta);
 
-        $ventas = $q->select('id', 'cliente_id', 'total', 'created_at')
+        // ✅ Usando entrega_id (la columna real en la tabla facturas)
+        $ventas = $q->select('id', 'entrega_id', 'total', 'created_at')
             ->orderBy('created_at', 'desc')
             ->paginate(15)
             ->withQueryString();
@@ -41,7 +42,7 @@ class ReportesController extends Controller
         return view('reportes.ventas', compact('ventas', 'total', 'desde', 'hasta'));
     }
 
-    // Exportar CSV
+    // --- Exportar CSV ---
     public function exportVentasCsv(Request $request): StreamedResponse
     {
         $desde = $request->input('desde');
@@ -51,7 +52,8 @@ class ReportesController extends Controller
         if ($desde) $q->whereDate('created_at', '>=', $desde);
         if ($hasta) $q->whereDate('created_at', '<=', $hasta);
 
-        $rows = $q->orderBy('created_at')->get(['id','cliente_id','total','created_at']);
+        // ✅ Usando entrega_id en lugar de cliente_id
+        $rows = $q->orderBy('created_at')->get(['id', 'entrega_id', 'total', 'created_at']);
 
         $headers = [
             'Content-Type'        => 'text/csv',
@@ -60,9 +62,9 @@ class ReportesController extends Controller
 
         return response()->stream(function () use ($rows) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['Factura', 'Cliente', 'Total', 'Fecha']);
+            fputcsv($out, ['Factura ID', 'Entrega ID', 'Total', 'Fecha']);
             foreach ($rows as $r) {
-                fputcsv($out, [$r->id, $r->cliente_id, $r->total, $r->created_at]);
+                fputcsv($out, [$r->id, $r->entrega_id, $r->total, $r->created_at]);
             }
             fclose($out);
         }, 200, $headers);
